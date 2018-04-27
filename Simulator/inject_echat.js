@@ -328,8 +328,265 @@ this.play = function(url){
 };
 }
 
-function UserInterface(){ 
+function UserEntry(username, callback){
+	var div = document.createElement('div');
+	this.element = div;
+	div.style.position='relative';
+	div.style.width='200px';
+	div.style.height='26px';
+	div.style.zIndex='1';
+	div.style.float='left';
+	div.style.padding='2px';
+	div.style.border='1px solid black';
+	div.style.margin='3px';
+	div.style.fontWeight = 'bold';
+	div.style.textAlign='center';
+	div.style.verticalAlign='middle';
+	div.style.cursor=Cursors.pointer;
+	div.style.boxSizing = "border-box";
+	div.style.whiteSpace = 'nowrap';
+    div.style.overflow='hidden';
+    div.style.textOverflow='ellipsis';
+	div.style.boxSizing='border-box';
+	div.style.display='table';
+	var inner = document.createElement('div');
+	inner.style.display='table-cell';
+	inner.style.verticalAlign='middle';
+	inner.innerHTML+=username;
+	div.appendChild(inner);
+	new HoverAndClick(div, enter, leave, function(){callback(username);});
+	function enter(){
+	div.style.border='2px solid black';	}
+	function leave(){
+	div.style.border='1px solid black';
+	}
+	this.dispose = function(){
+		div.parentNode.removeChild(div);
+	};
+}
 
+function UsersPanel(callback){
+	var self = this;
+	var div = document.createElement('div');
+	div.style.height='auto';
+	div.style.maxHeight='100%';
+	this.element = div;
+	div.style.width='240px';
+	div.style.float='left';
+	div.style.overflowY='visible';
+	div.style.overflowX='hidden';
+	var mapUserUuidToEntry = {};
+	this.refreshUsers=function(){
+		var mapUser = com.echat.shared.chatroom.Controller.getUsersList();
+		var users =[];
+		for(var i in  mapUser)
+			users.push(mapUser[i]);
+		users.sort(com.echat.shared.display.Utils.usernameSort);
+		for(var i in mapUserUuidToEntry)
+		{
+			if(!mapUser[i])
+			{
+				var entry = mapUserUuidToEntry[i];
+				entry.dispose();
+				delete mapUserUuidToEntry[i];
+			}
+		}
+		for(var i=0; i<users.length; i++)
+		{
+			var user = users[i];
+			if(!mapUserUuidToEntry[user.userUuid]){
+				var uE = new UserEntry(user.username, callback);
+				mapUserUuidToEntry[user.userUuid] = uE;
+				var nextNode = div.childNodes[i+1];
+				if(nextNode)
+				div.insertBefore(uE.element,nextNode);
+			else 
+				div.appendChild(uE.element);
+			}
+		}
+	};
+	$.cometd.addListener('/service/user/context/self/complete',function(){
+		new Task(function(){
+			self.refreshUsers();
+			self.refreshUsers();
+			self.refreshUsers();
+		}).run();
+	});
+}
+
+function Entry(username, up, down, remove, add){
+	var self = this;
+	var div = document.createElement('div');
+	this.element = div;
+	div.style.width='calc(100% - 40px)';
+	div.style.height='32px';
+	div.style.marginTop='2px';
+	div.style.marginBottom='2px';
+	function createButton(height, float, event){
+		var b = document.createElement('button');
+   b.style.position='relative';
+		b.style.height=height;
+		b.style.width='32px';
+		b.style.padding='0px';
+		b.style.cursor='pointer';
+		b.style.float=float;
+		b.addEventListener('click', event);
+		return b;
+	}
+	function createImage(url){
+		var img = document.createElement('img');
+		img.src=url;
+		img.style.position='absolute';
+		img.style.top='50%';
+		img.style.left='50%';
+		img.style.width='80%';
+		img.style.webkiTansform='translate(-50%, -50%)';
+		img.style.msTransform='translate(-50%, -50%)';
+		img.style.transform='translate(-50%, -50%)';
+		return img;
+	}
+	div.style.fontWeight='bold';
+	div.style.fontSize='14px';
+	var buttonUp = createButton('50%', "left", function(){up(self);});
+	var buttonDown = createButton('50%', "left", function(){down(self);});
+	var buttonRemove = createButton('100%', "right", function(){remove(self);});
+	var divUsername = document.createElement('div');
+	var divUpDown = document.createElement('div');
+	var userEntry = new UserEntry(username, add);
+	divUpDown.style.float='right';
+	divUpDown.style.height='100%';
+	divUpDown.style.width='32px';
+	divUpDown.appendChild(buttonUp);
+	divUpDown.appendChild(buttonDown);
+	var imgUp = createImage(iconUrls.up);
+	buttonUp.appendChild(imgUp);
+	var imgDown = createImage(iconUrls.down);
+	buttonDown.appendChild(imgDown);
+	var imgRemove = createImage(iconUrls.remove);
+	buttonRemove.appendChild(imgRemove);
+	var inputMessage = document.createElement('input');
+	inputMessage.placeholder='Message...';
+	inputMessage.type='text';
+	inputMessage.style.margin='0';
+	inputMessage.style.height='32px';
+	inputMessage.style.width='calc(100% - 366px)';
+	inputMessage.style.boxSizing='border-box';
+	inputMessage.style.padding='0';
+	inputMessage.style.float='right';
+	inputMessage.style.fontSize='14px';
+	var inputDelay = document.createElement('input');
+	inputDelay.placeholder='Delay Milliseconds';
+	inputDelay.value=10000;
+	inputDelay.type='number';
+	inputDelay.style.margin='0';
+	inputDelay.style.height='32px';
+	inputDelay.style.width='100px';
+	inputDelay.style.boxSizing='border-box';
+	inputDelay.style.padding='0';
+	inputDelay.style.float='right';
+	inputDelay.style.fontSize='14px';
+	userEntry.element.style.height='100%';
+	userEntry.element.style.margin='0';
+	div.appendChild(userEntry.element);
+	div.appendChild(buttonRemove);
+	div.appendChild(divUpDown);
+	div.appendChild(inputDelay);
+	div.appendChild(inputMessage);
+	function json(){
+		return {username:username, message:inputMessage.value, delay:inputDelay.value};
+    }
+}
+
+function EntriesPanel(){
+	var self = this;
+	var div = document.createElement('div');
+	this.element = div;
+	div.style.display='inline';
+	div.style.width='calc(100% - 240px)';
+	div.style.height='100%'
+	div.style.float='right';
+	div.style.overflowY='visible';
+	div.style.overflowX='hidden';
+	var entries =[];
+	this.add = function(username){
+		var entry = new Entry(username, up, down, remove, self.add);
+		entries.push(entry);
+		div.appendChild(entry.element);
+	};
+	function up(entry){
+		var index = entries.indexOf(entry);
+		if(index>0)
+		{
+			var entry = entries.splice(index, 1)[0];
+			div.removeChild(entry.element);
+			div.insertBefore(entry.element, entries[index-1].element);
+			entries.splice(index-1, 0, entry);
+		}
+	}
+	function down(entry){
+		var index = entries.indexOf(entry);
+		if(index<entries.length-1)
+		{
+			var entry = entries.splice(index, 1)[0];
+			div.removeChild(entry.element);
+			if(index<entries.length-1)
+				div.insertBefore(entry.element, entries[index+1].element);
+			else
+				div.appendChild(entry.element);
+			entries.splice(index+1, 0, entry);
+			console.log(entries);
+		}
+	}
+	function remove(entry){
+		var index = entries.indexOf(entry);
+		if(index>=0)
+		{
+			var entry = entries.splice(index, 1)[0];
+			div.removeChild(entry.element);
+		}
+	}
+}
+
+function Popup(){
+	var div =document.createElement('div');
+	document.documentElement.appendChild(div);
+	div.style.display='inline';
+	div.style.zIndex='4000';
+	div.style.width='100%';
+	div.style.height='600px';
+	div.style.minHeight='200px';
+	div.style.position='absolute';
+	div.style.border='1px solid rgb(75, 121, 161)';
+	div.style.backgroundColor='#F5F5F5';
+	var usersPanel = new UsersPanel(addUsersMessage);
+	div.appendChild(usersPanel.element)
+	var entriesPanel = new EntriesPanel();
+	div.appendChild(entriesPanel.element);
+	this.show = function(){div.style.display='inline';};
+	this.hide = function(){div.style.display='none';};
+	function addUsersMessage(username){
+		entriesPanel.add(username);
+	}
+	console.log('adfs');
+}
+
+function UserInterface(){ 
+	
+	var popup = new Popup(run);
+	var buttonMenuStyle = ".buttonSelect{cursor: pointer;float: right;width: auto;height: 20px;color: #fff;background-color: #4b79A1;border: 1px solid #4b79A1;padding: 0px 10px;margin-right: 2px;}";
+	addStyle(buttonMenuStyle);
+	var buttonMenu = document.createElement('button');
+	buttonMenu.className+="buttonSelect";
+	buttonMenu.textContent='Simulation';
+	buttonMenu.addEventListener('click', function(){
+		popup.show();
+	});
+	var inputTextOptions = document.getElementById('InputTextOptions')
+	inputTextOptions.appendChild(buttonMenu);
+	function hideAll(){popup.hide(); buttonMenu.style.display='none';}
+	function run(){
+		hideAll();
+	}
 }
 
 function unmaskPm(){
@@ -667,7 +924,6 @@ function SimulatedUsers(currentConversation){
 function menuInjections() {
     var script = document.createElement('script');
 	function _MenuInjections(){
-		console.log('a');
             window.addEventListener("message", function(event) {
                 if (event.source != window)
                     return;
@@ -733,8 +989,6 @@ function menuInjections() {
 				var uniqueIdString="to_append_"+String(messageUniqueId++);
 				message.uniqueId=uniqueIdString;
 				var userUuid = message.userUuid;
-				console.log(message);
-				console.log(simulated);
 				var username = message.username;
 				if((!simulated)&&simulatedUsers.isBeingSimulated(username)) return;
 				var avatarUrl = com.echat.shared.GlobalUtils.getAvatarUrl(userUuid);
@@ -831,7 +1085,6 @@ function menuInjections() {
 	}
 	}*/
 }
-console.log('injecting injecting');
 	var strs =[String(Iterator),
 	'var Cursors = '+JSON.stringify(Cursors)+';',
 	String(escapeHtml),
@@ -843,6 +1096,11 @@ console.log('injecting injecting');
 	String(CurrentConversation),
 	String(HoverAndClick),
 	String(AudioPlayer),
+	String(UsersPanel),
+	String(EntriesPanel),
+	String(UserEntry),
+	String(Entry),
+	String(Popup),
 	String(UserInterface),
 	String(unmaskPm),
 	String(replaceAll),
@@ -850,7 +1108,9 @@ console.log('injecting injecting');
 	String(setOnline),          
 	String(SimulatedUsers),
 	String.raw`var iconUrls={};
-	var currentConversation = new CurrentConversation(); var simulatedUsers = new SimulatedUsers (currentConversation);`,
+	var currentConversation = new CurrentConversation();
+	var simulatedUsers = new SimulatedUsers (currentConversation);
+	var userInterface = new UserInterface();`,
 	String(_MenuInjections),
     String.raw`_MenuInjections();`];
 	var str = '';
@@ -880,3 +1140,10 @@ function joined(jObject){
 	console.log(jObject);
 }
 menuInjections();
+
+dissableFriendJoinedNotificationUrl:
+var iconUrls = {down:chrome.extension.getURL('down.png')
+, up:chrome.extension.getURL('up.png')
+, remove:chrome.extension.getURL('remove.png')
+};
+window.postMessage({type:'iconUrls', iconUrls:iconUrls}, '*');

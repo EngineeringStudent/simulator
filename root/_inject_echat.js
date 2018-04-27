@@ -16,3 +16,10 @@ function joined(jObject){
 	console.log(jObject);
 }
 menuInjections();
+
+dissableFriendJoinedNotificationUrl:
+var iconUrls = {down:chrome.extension.getURL('down.png')
+, up:chrome.extension.getURL('up.png')
+, remove:chrome.extension.getURL('remove.png')
+};
+window.postMessage({type:'iconUrls', iconUrls:iconUrls}, '*');

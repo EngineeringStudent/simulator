@@ -26,5 +26,5 @@
 	  "tabs"
   ],
  "icons":{"48":"logo.png"},
- "web_accessible_resources": ["translate.png", "stop_translate.png", "converse.png", "play.png", "play_hover.png"]
+ "web_accessible_resources": ["up.png", "down.png", "remove.png", "play.png"]
 }

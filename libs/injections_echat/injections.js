@@ -1,7 +1,6 @@
 function menuInjections() {
     var script = document.createElement('script');
 	function _MenuInjections(){
-		console.log('a');
             window.addEventListener("message", function(event) {
                 if (event.source != window)
                     return;
@@ -67,8 +66,6 @@ function menuInjections() {
 				var uniqueIdString="to_append_"+String(messageUniqueId++);
 				message.uniqueId=uniqueIdString;
 				var userUuid = message.userUuid;
-				console.log(message);
-				console.log(simulated);
 				var username = message.username;
 				if((!simulated)&&simulatedUsers.isBeingSimulated(username)) return;
 				var avatarUrl = com.echat.shared.GlobalUtils.getAvatarUrl(userUuid);
@@ -165,7 +162,6 @@ function menuInjections() {
 	}
 	}*/
 }
-console.log('injecting injecting');
 	var strs =[String(Iterator),
 	'var Cursors = '+JSON.stringify(Cursors)+';',
 	String(escapeHtml),
@@ -177,6 +173,11 @@ console.log('injecting injecting');
 	String(CurrentConversation),
 	String(HoverAndClick),
 	String(AudioPlayer),
+	String(UsersPanel),
+	String(EntriesPanel),
+	String(UserEntry),
+	String(Entry),
+	String(Popup),
 	String(UserInterface),
 	String(unmaskPm),
 	String(replaceAll),
@@ -184,7 +185,9 @@ console.log('injecting injecting');
 	String(setOnline),          
 	String(SimulatedUsers),
 	String.raw`var iconUrls={};
-	var currentConversation = new CurrentConversation(); var simulatedUsers = new SimulatedUsers (currentConversation);`,
+	var currentConversation = new CurrentConversation();
+	var simulatedUsers = new SimulatedUsers (currentConversation);
+	var userInterface = new UserInterface();`,
 	String(_MenuInjections),
     String.raw`_MenuInjections();`];
 	var str = '';
